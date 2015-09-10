@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import _ from 'underscore';
 import helper from 'targetprocess-mashup-helper';
 
 import storageApi from './storageApi';
@@ -7,6 +8,7 @@ require('./index.css');
 
 let boardId;
 let $el;
+let observer;
 
 const getUnitId = ($cell) => {
 
@@ -231,7 +233,7 @@ const init = () => {
     restoreSizes();
 
     const $levels = getLevels().filter((k, v) => !$(v).data('isResizerAdded'));
-    console.log($levels);
+
     $levels.each((k, v) => {
 
         const $level = $(v);
@@ -250,6 +252,29 @@ helper.addBusListener('newlist', 'overview.board.ready', (e, {element: $el_}) =>
 
     init();
 
-    $el.on('mouseenter', '.i-role-list-root-container', () => init());
+    const throttleInit = _.throttle(init, 500, {
+        trailing: false
+    });
+
+    observer = new MutationObserver((mutations) => mutations.forEach(() => throttleInit()));
+
+    var config = {
+        childList: true,
+        subtree: true
+    };
+
+    observer.observe($el[0], config);
+
+});
+
+helper.addBusListener('newlist', 'destroy', () => {
+
+    console.log($el[0], observer);
+
+    if ($el[0] && observer) {
+
+        observer.disconnect($el[0]);
+
+    }
 
 });
