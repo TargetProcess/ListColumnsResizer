@@ -1,0 +1,15 @@
+.ListColumnResizer-resizer {
+    position: absolute;
+    background-color: #e8e8e8;
+    width: 3px;
+    top: 0;
+    right: -1px;
+    bottom: 0;
+    z-index: 99;
+    cursor: ew-resize;
+}
+
+.ListColumnResizer-resizer:hover,
+.ListColumnResizer-resizer.ui-draggable-dragging {
+    background-color: #a8a8a8;
+}

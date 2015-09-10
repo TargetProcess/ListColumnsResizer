@@ -1,3 +1,5 @@
 var makeWebpackConfig = require('./make-webpack-config');
 
-module.exports = makeWebpackConfig();
+module.exports = makeWebpackConfig({
+    mashupManager: false
+});
