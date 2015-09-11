@@ -28,7 +28,12 @@ const getLevelsById = (id) => getLevels().filter((k, v) => Number(getLevelId($(v
 
 const getSameLevels = ($level) => getLevelsById(getLevelId($level));
 
-const setColCellsWidth = ($cells, width) => $cells.innerWidth(width);
+const setColCellsWidth = ($cells, width) => {
+
+    $cells.parent().width(width);
+    $cells.css('width', 'auto');
+
+};
 
 const setHeaderCellWidth = ($cell, width) => $cell.innerWidth(width);
 
@@ -50,7 +55,7 @@ const getAllColCellsByLevelAndUnitId = ($level, unitId) => getAllColCellsByLevel
 const collectSizesFromCells = ($cells, levelId) => ({
         [levelId]: $cells.toArray().reduce((res, v) => ({
             ...res,
-            [v.getAttribute('data-unit-id')]: $(v).outerWidth()
+            [v.getAttribute('data-unit-id')]: $(v).data('isInitedByResizer') ? $(v).parent().width() : $(v).outerWidth()
         }), {})
     });
 
@@ -72,6 +77,7 @@ const setSizesToCells = (sizes) => {
 
             const $colCells = getAllColCellsByLevelAndUnitId($level, unitId);
 
+            $colCells.data('isInitedByResizer', true);
             setColCellsWidth($colCells, width);
 
         });
@@ -94,9 +100,7 @@ const saveSizes = (sizes) => {
 
 };
 
-const collectAndSaveSizes = () => {
-
-    const sizes = getLevels().toArray().reduce((res, v) => {
+const collectSizes = () => getLevels().toArray().reduce((res, v) => {
 
         const $level = $(v);
         const $headerCells = getHeaderCellsByLevel($level);
@@ -105,11 +109,9 @@ const collectAndSaveSizes = () => {
 
     }, {});
 
-    return saveSizes(sizes);
+const collectAndSaveSizes = () => saveSizes(collectSizes());
 
-};
-
-const restoreSizes = () => storageApi
+const loadSavedSizes = () => storageApi
     .get('ListColumnsResizer', boardId)
     .then(({data: res}) => {
 
@@ -123,7 +125,13 @@ const restoreSizes = () => storageApi
 
         }
 
-    })
+    });
+
+const restoreSizes = () => $.when(loadSavedSizes(), collectSizes())
+    .then((savedSizes, collectedSizes) => ({
+        ...collectedSizes,
+        ...savedSizes
+    }))
     .then(setSizesToCells);
 
 const addResizersToLevel = ($level) => {
@@ -186,7 +194,10 @@ helper.addBusListener('newlist', 'boardSettings.ready', (e, {boardSettings}) => 
 
 const init = () => {
 
-    $el.find('tau-name-cell').removeClass('ui-resizable');
+    $el.find('.tau-elems-cell').addClass('ListColumnResizer-cell');
+
+    $el.find('.tau-name-cell, .tau-elems-cell').removeClass('ui-resizable');
+    $el.find('.tau-board-list-view-resizer').remove();
 
     const $caption = $el.find('.tau-list-caption');
 
@@ -239,3 +250,4 @@ helper.addBusListener('newlist', 'destroy', () => {
     }
 
 });
+

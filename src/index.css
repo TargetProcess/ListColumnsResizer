@@ -3,7 +3,7 @@
     background-color: #e8e8e8;
     width: 3px;
     top: 0;
-    right: -1px;
+    right: -2px;
     bottom: 0;
     z-index: 1;
     cursor: ew-resize;
@@ -13,3 +13,8 @@
 .ListColumnResizer-resizer.ui-draggable-dragging {
     background-color: #a8a8a8;
 }
+
+.ListColumnResizer-cell {
+    border-right: 1px solid #e8e8e8;
+}
+
