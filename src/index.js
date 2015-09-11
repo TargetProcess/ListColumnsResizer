@@ -10,88 +10,49 @@ let boardId;
 let $el;
 let observer;
 
-const getUnitId = ($cell) => {
+const log = (...args) => {
 
-    return $cell.data('unitId') || $cell.data('id');
+    console.log.apply(console, args);
 
-};
-
-const getLevels = () => {
-
-    return $el.find('.tau-list-level');
+    return args.pop();
 
 };
 
-const getLevelId = ($level) => {
+const getUnitId = ($cell) => $cell.data('unitId') || $cell.data('id');
 
-    return $level.data('list-level');
+const getLevels = () => $el.find('.tau-list-level');
 
-};
+const getLevelId = ($level) => $level.data('list-level');
 
-const getLevelsById = (id) => {
-
-    return getLevels().filter((k, v) => getLevelId($(v)) == id);
-
-};
+const getLevelsById = (id) => getLevels().filter((k, v) => Number(getLevelId($(v))) === Number(id));
 
 const getSameLevels = ($level) => getLevelsById(getLevelId($level));
 
-const setColCellsWidth = ($cells, width) => {
+const setColCellsWidth = ($cells, width) => $cells.innerWidth(width);
 
-    $cells.innerWidth(width);
+const setHeaderCellWidth = ($cell, width) => $cell.innerWidth(width);
 
-};
+const getHeaderCellsByLevel = ($level) => $level.children('.i-role-headerholder').find('.tau-elems-cell');
 
-const setHeaderCellWidth = ($cell, width) => {
+const getAllHeaderCellsByLevel = ($level) => getSameLevels($level)
+    .children('.i-role-headerholder').find('.tau-elems-cell');
 
-    $cell.innerWidth(width);
+const getAllColCellsByLevel = ($level) => getSameLevels($level)
+    .children('.i-role-cardsholder').children('.i-role-card')
+    .children('.tau-list-line').children('.tau-elems-table').find('.tau-board-unit');
 
-};
+const getAllHeaderCellsByLevelAndUnitId = ($level, unitId) => getAllHeaderCellsByLevel($level)
+    .filter((k, v) => getUnitId($(v)) === unitId);
 
-const getHeaderCellsByLevel = ($level) => {
+const getAllColCellsByLevelAndUnitId = ($level, unitId) => getAllColCellsByLevel($level)
+    .filter((k, v) => getUnitId($(v)) === unitId);
 
-    return $level.children('.i-role-headerholder').find('.tau-elems-cell');
-
-};
-
-const getAllHeaderCellsByLevel = ($level) => {
-
-    return getSameLevels($level).children('.i-role-headerholder').find('.tau-elems-cell');
-
-};
-
-const getAllColCellsByLevel = ($level) => {
-
-    return getSameLevels($level).children('.i-role-cardsholder').children('.i-role-card')
-        .children('.tau-list-line').children('.tau-elems-table').find('.tau-board-unit');
-
-};
-
-const getAllHeaderCellsByLevelAndUnitId = ($level, unitId) => {
-
-    return getAllHeaderCellsByLevel($level).filter((k, v) => getUnitId($(v)) === unitId);
-
-};
-
-const getAllColCellsByLevelAndUnitId = ($level, unitId) => {
-
-    return getAllColCellsByLevel($level).filter((k, v) => getUnitId($(v)) === unitId);
-
-};
-
-const collectSizesFromCells = ($cells, levelId) => {
-
-    const sizes = {
-        [levelId]: $cells.toArray().reduce((res, v) => {
-
-            return {...res, [v.getAttribute('data-unit-id')]: $(v).outerWidth()};
-
-        }, {})
-    };
-
-    return sizes;
-
-};
+const collectSizesFromCells = ($cells, levelId) => ({
+        [levelId]: $cells.toArray().reduce((res, v) => ({
+            ...res,
+            [v.getAttribute('data-unit-id')]: $(v).outerWidth()
+        }), {})
+    });
 
 const setSizesToCells = (sizes) => {
 
@@ -144,31 +105,26 @@ const collectAndSaveSizes = () => {
 
     }, {});
 
-    console.log('RES', sizes);
-
     return saveSizes(sizes);
 
 };
 
-const restoreSizes = () => {
+const restoreSizes = () => storageApi
+    .get('ListColumnsResizer', boardId)
+    .then(({data: res}) => {
 
-    return storageApi.get('ListColumnsResizer', boardId)
-        .then(({data: res}) => {
+        try {
 
-            try {
+            return JSON.parse(res);
 
-                return JSON.parse(res);
+        } catch (e) {
 
-            } catch (e) {
+            return {};
 
-                return {};
+        }
 
-            }
-
-        })
-        .then(setSizesToCells);
-
-};
+    })
+    .then(setSizesToCells);
 
 const addResizersToLevel = ($level) => {
 
@@ -230,6 +186,13 @@ helper.addBusListener('newlist', 'boardSettings.ready', (e, {boardSettings}) => 
 
 const init = () => {
 
+    $el.find('tau-name-cell').removeClass('ui-resizable');
+
+    const $caption = $el.find('.tau-list-caption');
+
+    // to prevent text overlap
+    $caption.find('.tau-elems-cell').css('background-color', $caption.css('background-color'));
+
     restoreSizes();
 
     const $levels = getLevels().filter((k, v) => !$(v).data('isResizerAdded'));
@@ -268,8 +231,6 @@ helper.addBusListener('newlist', 'overview.board.ready', (e, {element: $el_}) =>
 });
 
 helper.addBusListener('newlist', 'destroy', () => {
-
-    console.log($el[0], observer);
 
     if ($el[0] && observer) {
 
