@@ -31,7 +31,7 @@ const getSameLevels = ($level) => getLevelsById(getLevelId($level));
 const setColCellsWidth = ($cells, width) => {
 
     $cells.parent().width(width);
-    $cells.css('width', 'auto');
+    $cells.css('width', '100%');
 
 };
 
@@ -165,7 +165,8 @@ const addResizersToLevel = ($level) => {
 
             const width = delta;
 
-            if (width <= 10) {
+            // padding of header cells :(
+            if (width <= 17) {
 
                 e.stopPropagation();
                 return false;
@@ -194,19 +195,24 @@ helper.addBusListener('newlist', 'boardSettings.ready', (e, {boardSettings}) => 
 
 const init = () => {
 
-    $el.find('.tau-elems-cell').addClass('ListColumnResizer-cell');
+    const $levels = getLevels().not((k, v) => $(v).data('isResizerAdded'));
+    const $cells = $el.find('.tau-board-unit').not((k, v) => $(v).data('isInitedByResizer'));
 
-    $el.find('.tau-name-cell, .tau-elems-cell').removeClass('ui-resizable');
-    $el.find('.tau-board-list-view-resizer').remove();
+    if ($levels.length || $cells.length) {
 
-    const $caption = $el.find('.tau-list-caption');
+        $el.find('.tau-elems-cell').addClass('ListColumnResizer-cell');
 
-    // to prevent text overlap
-    $caption.find('.tau-elems-cell').css('background-color', $caption.css('background-color'));
+        $el.find('.tau-name-cell, .tau-elems-cell').removeClass('ui-resizable');
+        $el.find('.tau-board-list-view-resizer').remove();
 
-    restoreSizes();
+        const $caption = $el.find('.tau-list-caption');
 
-    const $levels = getLevels().filter((k, v) => !$(v).data('isResizerAdded'));
+        // to prevent text overlap
+        $caption.find('.tau-elems-cell').css('background-color', $caption.css('background-color'));
+
+        restoreSizes();
+
+    }
 
     $levels.each((k, v) => {
 
