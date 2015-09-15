@@ -9,6 +9,7 @@ require('./index.css');
 let boardId;
 let $el;
 let observer;
+let savedSizes = {};
 
 const log = (...args) => {
 
@@ -18,7 +19,8 @@ const log = (...args) => {
 
 };
 
-const getUnitId = ($cell) => $cell.data('unitId') || $cell.data('id');
+// _sortable__ artifact from migration
+const getUnitId = ($cell) => ($cell.data('unit-id') || $cell.data('id')).replace('_sortable__', '__');
 
 const getLevels = () => $el.find('.tau-list-level');
 
@@ -88,6 +90,8 @@ const setSizesToCells = (sizes) => {
 
 const saveSizes = (sizes) => {
 
+    savedSizes = sizes;
+
     if (window.loggedUser.isAdministrator) {
 
         return storageApi.setPublic('ListColumnsResizer', boardId, {data: JSON.stringify(sizes)});
@@ -127,8 +131,8 @@ const loadSavedSizes = () => storageApi
 
     });
 
-const restoreSizes = () => $.when(loadSavedSizes(), collectSizes())
-    .then((savedSizes, collectedSizes) => ({
+const restoreSizes = () => $.when(collectSizes())
+    .then((collectedSizes) => log({
         ...collectedSizes,
         ...savedSizes
     }))
@@ -230,8 +234,6 @@ helper.addBusListener('newlist', 'overview.board.ready', (e, {element: $el_}) =>
 
     $el = $el_;
 
-    init();
-
     const throttleInit = _.throttle(init, 500, {
         trailing: false
     });
@@ -243,7 +245,14 @@ helper.addBusListener('newlist', 'overview.board.ready', (e, {element: $el_}) =>
         subtree: true
     };
 
-    observer.observe($el[0], config);
+    loadSavedSizes().then((savedSizes_) => {
+
+        savedSizes = savedSizes_;
+        init();
+
+        observer.observe($el[0], config);
+
+    });
 
 });
 
