@@ -74,7 +74,7 @@ var makeWebpackConfig = function(opts) {
         new webpack.DefinePlugin({
             __DEV__: !opts.production
         }),
-        new webpack.BannerPlugin('v' + pkg.version + ' Build ' + String(new Date()), {
+        new webpack.BannerPlugin('v' + pkg.version + ' Build ' + new Date().toUTCString(), {
             entryOnly: true
         })
     ];
