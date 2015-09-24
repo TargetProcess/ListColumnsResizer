@@ -8,8 +8,12 @@ require('./index.css');
 
 let boardId;
 let $el;
-let observer;
+
 let savedSizes = {};
+
+let $style;
+
+let levelsByDepth = {};
 
 const log = (...args) => {
 
@@ -19,72 +23,21 @@ const log = (...args) => {
 
 };
 
-// _sortable__ artifact from migration
 const getUnitId = ($cell) => ($cell.data('unit-id') || $cell.data('id')).replace('_sortable__', '__');
 
 const getLevels = () => $el.find('.tau-list-level');
 
-const getLevelId = ($level) => $level.data('list-level');
-
-const getLevelsById = (id) => getLevels().filter((k, v) => Number(getLevelId($(v))) === Number(id));
-
-const getSameLevels = ($level) => getLevelsById(getLevelId($level));
-
-const setColCellsWidth = ($cells, width) => {
-
-    $cells.parent().width(width);
-    $cells.css('width', '100%');
-
-};
-
-const setHeaderCellWidth = ($cell, width) => $cell.innerWidth(width);
+const getLevelId = ($level) => $level.attr('id');
+const getLevelDepth = ($level) => $level.data('list-level');
 
 const getHeaderCellsByLevel = ($level) => $level.children('.i-role-headerholder').find('.tau-elems-cell');
 
-const getAllHeaderCellsByLevel = ($level) => getSameLevels($level)
-    .children('.i-role-headerholder').find('.tau-elems-cell');
+const getColCellsByLevelId = (id) => {
 
-const getAllColCellsByLevel = ($level) => getSameLevels($level)
-    .children('.i-role-cardsholder').children('.i-role-card')
-    .children('.tau-list-line').children('.tau-elems-table').find('.tau-board-unit');
+    // need only first real row
+    const $row = $el.find(`#${id} > .i-role-cardsholder > :not(.tau-axis-card-no-value):first`);
 
-const getAllHeaderCellsByLevelAndUnitId = ($level, unitId) => getAllHeaderCellsByLevel($level)
-    .filter((k, v) => getUnitId($(v)) === unitId);
-
-const getAllColCellsByLevelAndUnitId = ($level, unitId) => getAllColCellsByLevel($level)
-    .filter((k, v) => getUnitId($(v)) === unitId);
-
-const collectSizesFromCells = ($cells, levelId) => ({
-        [levelId]: $cells.toArray().reduce((res, v) => ({
-            ...res,
-            [v.getAttribute('data-unit-id')]: $(v).data('isInitedByResizer') ? $(v).parent().width() : $(v).outerWidth()
-        }), {})
-    });
-
-const setSizesToCells = (sizes) => {
-
-    Object.keys(sizes).forEach((level) => {
-
-        const levelSizes = sizes[level];
-
-        const $level = getLevelsById(level);
-
-        Object.keys(levelSizes).forEach((unitId) => {
-
-            const width = levelSizes[unitId];
-
-            const $headerCell = getAllHeaderCellsByLevelAndUnitId($level, unitId);
-
-            setHeaderCellWidth($headerCell, width);
-
-            const $colCells = getAllColCellsByLevelAndUnitId($level, unitId);
-
-            $colCells.data('isInitedByResizer', true);
-            setColCellsWidth($colCells, width);
-
-        });
-
-    });
+    return $row.find('.tau-elems-table .tau-board-unit');
 
 };
 
@@ -104,17 +57,6 @@ const saveSizes = (sizes) => {
 
 };
 
-const collectSizes = () => getLevels().toArray().reduce((res, v) => {
-
-        const $level = $(v);
-        const $headerCells = getHeaderCellsByLevel($level);
-
-        return {...res, ...collectSizesFromCells($headerCells, getLevelId($level))};
-
-    }, {});
-
-const collectAndSaveSizes = () => saveSizes(collectSizes());
-
 const loadSavedSizes = () => storageApi
     .get('ListColumnsResizer', boardId)
     .then(({data: res}) => {
@@ -131,18 +73,109 @@ const loadSavedSizes = () => storageApi
 
     });
 
-const restoreSizes = () => $.when(collectSizes())
-    .then((collectedSizes) => log({
-        ...collectedSizes,
-        ...savedSizes
-    }))
-    .then(setSizesToCells);
+const mergeSavedSizes = () => {
+
+    levelsByDepth = savedSizes || {};
+
+};
+
+const setStyle = (text) => {
+
+    $style.text(text);
+
+};
+
+const generateStyle = () => {
+
+    return _.map(levelsByDepth, (level, depth) => {
+
+        return _.map(level, (width, unitId) => {
+
+            return [
+                `.tau-list-level-${depth} .tau-list-caption .tau-list-${unitId}-cell {width: ${width}px !important; }`,
+                `.tau-list-level-${depth} .tau-elems-table .tau-board-unit.tau-list-${unitId}-cell {width: ${width - 1}px !important; }`
+            ].join('\n');
+
+        }).join('\n\n');
+
+    }).join('\n\n\n');
+
+};
+
+const setWidthByLevelDepthAndUnit = (depth, unitId, width) => {
+
+    var level = levelsByDepth[depth];
+
+    var columnWidth = level[unitId];
+
+    if (columnWidth === width) {
+
+        return;
+
+    }
+
+    level[unitId] = width;
+
+    setStyle(generateStyle());
+
+};
+
+const collectAndSaveSizes = () => {
+
+    const dataToSave = levelsByDepth;
+
+    saveSizes(dataToSave);
+
+};
+
+const addLevelToStructure = ($level) => {
+
+    const depth = getLevelDepth($level);
+
+    const depthLevel = levelsByDepth[depth] || {};
+
+    levelsByDepth[depth] = depthLevel;
+
+    getColCellsByLevelId(getLevelId($level)).each((k, v) => {
+
+        const $cell = $(v);
+        const unitId = getUnitId($cell);
+
+        depthLevel[unitId] = $cell.outerWidth() + 2;
+
+    });
+
+    levelsByDepth[depth] = depthLevel;
+
+};
+
+const collectStructure = ($levels) => {
+
+    $levels.map((k, v) => {
+
+        addLevelToStructure($(v));
+
+    });
+
+};
 
 const addResizersToLevel = ($level) => {
+
+    if ($level.data('ListColumnsResizer-added')) {
+
+        return;
+
+    }
+
+    addLevelToStructure($level);
+
+    $level.data('ListColumnsResizer-added', true);
 
     const $cells = getHeaderCellsByLevel($level);
 
     $cells.each((k, v) => $(v).append('<div class="ListColumnResizer-resizer"></div>'));
+
+    $cells.each((k, v) => $(v).data('level-depth', getLevelDepth($level)).data('unit-id', getUnitId($(v))));
 
     const $resizers = $cells.find('.ListColumnResizer-resizer');
 
@@ -153,7 +186,7 @@ const addResizersToLevel = ($level) => {
         cursorAt: false,
         stop: () => {
 
-            collectAndSaveSizes($el);
+            collectAndSaveSizes();
             $resizers.css({
                 left: 'auto'
             });
@@ -169,7 +202,6 @@ const addResizersToLevel = ($level) => {
 
             const width = delta;
 
-            // padding of header cells :(
             if (width <= 17) {
 
                 e.stopPropagation();
@@ -177,15 +209,30 @@ const addResizersToLevel = ($level) => {
 
             }
 
-            const unitId = getUnitId($currentCell);
+            const levelDepth = $currentCell.data('level-depth');
+            const unitId = $currentCell.data('unit-id');
 
-            const $headerCells = getAllHeaderCellsByLevelAndUnitId($level, unitId);
-            const $colCells = getAllColCellsByLevelAndUnitId($level, unitId);
-
-            setHeaderCellWidth($headerCells, width);
-            setColCellsWidth($colCells, width);
+            setWidthByLevelDepthAndUnit(levelDepth, unitId, width);
 
         }
+
+    });
+
+};
+
+const init = () => {
+
+    const $levels = getLevels();
+
+    mergeSavedSizes();
+
+    $levels.each((k, v) => addResizersToLevel($(v)));
+
+    setStyle(generateStyle());
+
+    $el.on('click', '.tau-list-level', (e) => {
+
+        addResizersToLevel($(e.currentTarget));
 
     });
 
@@ -197,72 +244,20 @@ helper.addBusListener('newlist', 'boardSettings.ready', (e, {boardSettings}) => 
 
 });
 
-const init = () => {
-
-    const $levels = getLevels().not((k, v) => $(v).data('isResizerAdded'));
-    const $cells = $el.find('.tau-board-unit').not((k, v) => $(v).data('isInitedByResizer'));
-
-    if ($levels.length || $cells.length) {
-
-        $el.find('.tau-elems-cell').addClass('ListColumnResizer-cell');
-
-        $el.find('.tau-name-cell, .tau-elems-cell').removeClass('ui-resizable');
-        $el.find('.tau-board-list-view-resizer').remove();
-
-        const $caption = $el.find('.tau-list-caption');
-
-        // to prevent text overlap
-        $caption.find('.tau-elems-cell').css('background-color', $caption.css('background-color'));
-
-        restoreSizes();
-
-    }
-
-    $levels.each((k, v) => {
-
-        const $level = $(v);
-
-        $level.data('isResizerAdded', true);
-
-        addResizersToLevel($level);
-
-    });
-
-};
-
 helper.addBusListener('newlist', 'overview.board.ready', (e, {element: $el_}) => {
 
     $el = $el_;
 
-    const throttleInit = _.throttle(init, 500, {
-        trailing: false
-    });
-
-    observer = new MutationObserver((mutations) => mutations.forEach(() => throttleInit()));
-
-    var config = {
-        childList: true,
-        subtree: true
-    };
+    $el.addClass('ListColumnResizer-added');
 
     loadSavedSizes().then((savedSizes_) => {
 
         savedSizes = savedSizes_;
+        levelsByDepth = {};
         init();
-
-        observer.observe($el[0], config);
 
     });
 
-});
-
-helper.addBusListener('newlist', 'destroy', () => {
-
-    if ($el[0] && observer) {
-
-        observer.disconnect($el[0]);
-
-    }
+    $style = $('<style />').appendTo($el);
 
 });
-
