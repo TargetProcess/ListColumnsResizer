@@ -141,7 +141,7 @@ const addLevelToStructure = ($level) => {
         const $cell = $(v);
         const unitId = getUnitId($cell);
 
-        depthLevel[unitId] = $cell.outerWidth() + 2;
+        depthLevel[unitId] = depthLevel[unitId] || $cell.outerWidth() + 2;
 
     });
 
