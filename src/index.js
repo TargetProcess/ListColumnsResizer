@@ -1,6 +1,6 @@
 import $ from 'jquery';
 import _ from 'underscore';
-import helper from 'targetprocess-mashup-helper';
+import helper from 'targetprocess-mashup-helper/lib/events';
 
 import storageApi from './storageApi';
 
