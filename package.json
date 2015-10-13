@@ -10,8 +10,8 @@
   "author": "Aliaksei Shytkin <shitkin@targetprocess.com>",
   "scripts": {
     "start": "rm -rf ../Targetprocess-mashups/Common/ListColumnsResizer && NODE_ENV=development webpack --watch --output-path ../Targetprocess-mashups/Common/ListColumnsResizer",
-    "build": "webpack",
-    "build-production": "webpack --config webpack-production.config.js"
+    "build-library": "rm -rf build/library && NODE_ENV=production webpack --config webpack-library.config.js --output-path build/library --progress &&  cp src/*.{mkd,png} build/library",
+    "build-production": "NODE_ENV=production webpack --config webpack-production.config.js --output-path build && mv build/index.js build/release.js"
   },
   "licenses": [
     {

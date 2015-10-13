@@ -3,7 +3,7 @@
     background-color: #e8e8e8;
     width: 3px;
     top: 0;
-    right: -2px;
+    right: -3px;
     bottom: 0;
     z-index: 1;
     cursor: ew-resize;
@@ -14,7 +14,26 @@
     background-color: #a8a8a8;
 }
 
-.ListColumnResizer-cell {
+.ListColumnResizer-added .tau-elems-cell {
     border-right: 1px solid #e8e8e8;
+}
+
+.ListColumnResizer-added .tau-list-caption .tau-elems-cell {
+    background-color: #f6f7f9;
+    border-right: 2px solid #e8e8e8;
+}
+
+.ListColumnResizer-added .tau-board-list-view-resizer {
+    display: none;
+}
+
+.ListColumnResizer-added .ui-resizable {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+}
+
+.ListColumnResizer-added .ui-resizable .tau-board-unit {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
 }
 
